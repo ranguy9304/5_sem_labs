@@ -8,12 +8,14 @@ enum dataType
     FLOAT,
     CHAR,
     DOUBLE,
+    NONEDT
 
 };
 char *dataTypeString[]={"INT",
     "FLOAT",
     "CHAR",
-    "DOUBLE"};
+    "DOUBLE",
+    "NONE"};
 struct TableToken
 {
     char *lexeme;
@@ -29,17 +31,26 @@ struct ListElement
 };
 struct ListElement *TABLE[TableLength];
 int enumString(char *str){
+    puts(str);
     if(!strcmp(str,"INT")){
+        // printf("1");
         return INT;
     }
     else if(!strcmp(str,"DOUBLE")){
+        // printf("2");
         return DOUBLE;
     }
     else if(!strcmp(str,"FLOAT")){
+        // printf("3");
         return FLOAT;
     }
     else if(!strcmp(str,"CHAR")){
+        // printf("4");
         return CHAR;
+    }
+    else if(!strcmp(str,"NONEDT")){
+        // printf("4");
+        return NONEDT;
     }
 }
 void Initialize()

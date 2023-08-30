@@ -1,6 +1,6 @@
 
-int b(hello){
-    int fuc(hello)
+int b(dfsd,sdd){
+    int fun=0;
 
 }
     if (c == '=')

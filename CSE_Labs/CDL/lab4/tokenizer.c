@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdbool.h>
-char *TokenType[] = {"OPP", "ROPP", "DATATYPE", "IDENTIFIER", "KEYWORD","NONE"};
+char *TokenType[] = {"OPP", "ROPP", "DATATYPE", "IDENTIFIER", "KEYWORD","NUMBER","NONE"};
 enum TokenList
 {
     OPP = 0,
@@ -10,6 +10,7 @@ enum TokenList
     DATATYPE,
     IDENTIFIER,
     KEYWORD,
+    NUMBER,
     NONE
 };
 typedef struct Token
@@ -127,6 +128,30 @@ Token isOpp(char c, char *buf, FILE *fp, int i, int *row, int *column)
         return t;
     }
 }
+Token isMyg(char c, char *buf, FILE *fp, int i, int *row, int *column)
+{
+
+    if (c == ';')
+    {
+        Token t;
+        t.row = *row;
+        t.column = *column;
+        strcpy(t.lexeme, ";");
+        t.type = NONE;
+
+        return t;
+    }
+    
+    else
+    {
+        Token t;
+        t.row = -1;
+        t.column = -1;
+        strcpy(t.lexeme, "");
+        t.type=NONE;
+        return t;
+    }
+}
 Token isBracket(char c, char *buf, FILE *fp, int i, int *row, int *column)
 {
     if (c == '[' || c == ']' ||
@@ -172,7 +197,7 @@ Token isNum(char c, char *buf, FILE *fp, int i, int *row, int *column)
         t.row = *row;
         t.column = *column;
         strcpy(t.lexeme, temp);
-        t.type=NONE;
+        t.type=NUMBER;
         return t;
     }
     else
@@ -366,6 +391,12 @@ Token getNextToken(char c, FILE *fp, int *row, int *column)
             return retract;
         }
         retract = isOpp(c, buf, fp, i, row, column);
+        if (retract.row >= 0)
+        {
+            *column += 1;
+            return retract;
+        }
+        retract = isMyg(c, buf, fp, i, row, column);
         if (retract.row >= 0)
         {
             *column += 1;
