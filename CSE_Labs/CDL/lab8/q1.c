@@ -5,18 +5,19 @@
 #include <ctype.h>
 #include "symbolTable.c"
 #include "tokenizer.c"
+#include "preprocessor.c"
 
 #define max 20
 
-// program - > main ( ) { declaration stat-list }
-// id-list -> id idPrime
-// idPrime -> epislon | , id-list | [number],id-list | [number]
-// stat-list -> stat stat-list | epislon
-// stat -> ass-stat ;
-// ass-stat -> id = expn
-// expn -> simp-exp eprime
-// eprime -> relop simp_exp | epsilon
-// simp-exp -> term seprime
+// program - > main ( ) { declaration stat-list }                 FI = { main }   FO = { $ }
+// id-list -> id idPrime                                            FI ={ id }   FO ={ $ }
+// idPrime -> epislon | , id-list | [number],id-list | [number]     FI = { $ , , , [  } FO ={ $ }
+// stat-list -> stat stat-list | epislon                            FI = { id , $ } FO = { } }
+// stat -> ass-stat ;                                               FI = { id }  FO = { id, $ }
+// ass-stat -> id = expn                                            FI = { id }  FO = { ; }
+// expn -> simp-exp eprime                                          FI = { id , num } FO = { ; }
+// eprime -> relop simp_exp | epsilon                               FI = { relop , $ } FO = { ; }
+// simp-exp -> term seprime                                         FI = { id , num }
 // seprime -> addop term seprime | epsilon
 // term -> factor tprime
 // tprime -> mulop factor tprime | epsilon
@@ -31,234 +32,335 @@ FILE *fp, checkpoint;
 Token retract;
 // retract.row = 0;
 int decl_flag = 1;
-void id_list();
-void listPrime()
+bool id_list();
+char error[100];
+void saveError(char *str)
 {
-    checkpoint = *fp;
-
-    retract.row = 0;
-
-    if (strcmp(getNextTokenTable().lexeme, ",") == 0)
-        id_list();
-    else
-        *fp = checkpoint;
+    // printf("ERROR : %s \n", str);
+    strcpy(error, str);
 }
-void id_list()
-{
-
-    retract.row = 0;
-
-    if (getNextTokenTable().type == IDENTIFIER)
-        listPrime();
-}
-
 void invalid()
 {
     printf("Parse Unsuccessful\n");
-    printf("Error at row %d and column %d\n", row, column);
+    retract = getPrevTokenTable();
+    printToken(retract);
+    printf("Error at row %d and column %d\n", retract.row, retract.column);
+    printf("ERROR : %s\n", error);
 }
 
-void assignPrime()
+// bool id_list();
+bool listPrime()
 {
+    printf("list prime\n");
+    // checkpoint = *fp;
 
-    retract.row = 0;
-    // retract = ;
-    if (getNextTokenTable().type == IDENTIFIER)
+    if (strcmp(getNextTokenTable().lexeme, ",") == 0)
     {
-        // retract = getNextTokenTable();
-        if (strcmp(getNextTokenTable().lexeme, ";") == 0)
-            return;
+        id_list();
+        return true;
     }
-    else if (retract.type == NUMBER)
+    else if (strcmp(getCurTokenTable().lexeme, "[") == 0)
     {
-        // retract = getNextTokenTable();
-        if (strcmp(getNextTokenTable().lexeme, ";") == 0)
-            return;
+        printf("[ def entry\n");
+        if (getNextTokenTable().type == NUMBER)
+        {
+
+            if (strcmp(getNextTokenTable().lexeme, "]") == 0)
+            {
+                printf("] def entry\n");
+                if (strcmp(getNextTokenTable().lexeme, ",") == 0)
+                {
+                    // printToken(getCurTokenTable());
+                    id_list();
+                    return true;
+                }
+                else
+                {
+                    printf("returning from listPrime\n");
+                    getPrevTokenTable();
+                    return true;
+                }
+            }
+            else
+            {
+                saveError("no  ]");
+                return false;
+            }
+        }
+
+        else
+        {
+            saveError("for now number in []");
+            return false;
+        }
     }
     else
     {
-        invalid();
-        exit(0);
-    }
-}
-void Assignment()
-{
+        // printToken(getCurTokenTable());
+        saveError("no , or [");
 
-    retract.row = 0;
+        return false;
+    }
+    // *fp = checkpoint;
+}
+bool id_list()
+{
+    printf("id list\n");
 
     if (getNextTokenTable().type == IDENTIFIER)
     {
-
-        if (strcmp(getNextTokenTable().lexeme, "=") == 0)
-            assignPrime();
-        else
-        {
-
-            invalid();
-            exit(0);
-        }
+        printf("enter into id_list\n");
+        listPrime();
+        return true;
     }
+    saveError("not an identifier");
+    return false;
 }
 
-void data_type()
+// bool assignPrime()
+// {
+
+//     retract.row = 0;
+//     // retract = ;
+//     if (getNextTokenTable().type == IDENTIFIER)
+//     {
+//         // retract = getNextTokenTable();
+//         if (strcmp(getNextTokenTable().lexeme, ";") == 0)
+//             return;
+//     }
+//     else if (retract.type == NUMBER)
+//     {
+//         // retract = getNextTokenTable();
+//         if (strcmp(getNextTokenTable().lexeme, ";") == 0)
+//             return;
+//     }
+//     else
+//     {
+//         invalid();
+//         exit(0);
+//     }
+// }
+// bool Assignment()
+// {
+
+//     retract.row = 0;
+
+//     if (getNextTokenTable().type == IDENTIFIER)
+//     {
+
+//         if (strcmp(getNextTokenTable().lexeme, "=") == 0)
+//             assignPrime();
+//         else
+//         {
+
+//             invalid();
+//             exit(0);
+//         }
+//     }
+// }
+
+bool data_type()
 {
+    printf("data type\n");
 
     retract = getNextTokenTable();
 
     if (strcmp(retract.lexeme, "int") == 0 || strcmp(retract.lexeme, "char") == 0)
-        return;
-    else
-    {
-        getPrevTokenTable();
-
-        decl_flag = 0;
-    }
-}
-void decleration()
-{
-
-    data_type();
-    if (decl_flag)
-        id_list();
-
-    if (decl_flag && !strcmp(getNextTokenTable().lexeme, ";"))
-        decleration();
-    else
-        getPrevTokenTable();
-}
-// factor -> id | num
-bool factor()
-{
-    printToken(getCurTokenTable());
-    printf("factor ->\n");
-    if (getNextTokenTable().type == IDENTIFIER)
         return true;
     else
     {
         getPrevTokenTable();
+        saveError("not a datatype");
+        return false;
+        // decl_flag = 0;
+    }
+}
+bool decleration()
+{
+    printf("declaration\n");
+
+    if (data_type())
+        if (id_list())
+        {
+            if (!strcmp(getNextTokenTable().lexeme, ";"))
+            {
+                printf("decleration -> data_type id_list ;\n");
+                decleration();
+                return true;
+            }
+        }
+
+    getPrevTokenTable();
+    return true;
+    // else
+}
+// factor -> id | num
+bool factor()
+{
+    // printToken(getCurTokenTable());
+    printf("factor ->\n");
+    if (getNextTokenTable().type == IDENTIFIER)
+    {
+        printf("id");
+        return true;
+    }
+    else
+    {
+        getPrevTokenTable();
         if (getNextTokenTable().type == NUMBER)
+        {
+            printf("NUM");
             return true;
+        }
         else
         {
             getPrevTokenTable();
+            saveError("should be number or id");
             return false;
         }
     }
 }
 // tprime -> mulop factor tprime | epsilon
-void tprime()
+bool tprime()
 {
+    printf("tprime\n");
     if (getNextTokenTable().type == OPP)
     {
 
-        factor();
-        tprime();
+        if (factor())
+            tprime();
     }
     else
         getPrevTokenTable();
+    return true;
 }
-
 
 // relop -> == | != | <= | >= | > | <
 // addop -> + | -
 // mulop -> * | / | %
 
 // term -> factor tprime
-void term()
+bool term()
 {
-    factor();
-    tprime();
+    printf("term\n");
+    if (factor())
+        if (tprime())
+            return true;
+    return false;
 }
 // seprime -> addop term seprime | epsilon
-void seprime()
+bool seprime()
 {
+    printf("seprime\n");
     if (getNextTokenTable().type == OPP)
     {
 
-        term();
-        seprime();
+        if (term())
+            seprime();
     }
     else
         getPrevTokenTable();
+
+    return true;
 }
 // simp-exp -> term seprime
-void simp_exp()
+bool simp_exp()
 {
+    printf("simp exp\n");
 
-    term();
-    seprime();
+    if (term())
+        if (seprime())
+            return true;
+    return false;
 }
 // eprime -> relop simp_exp | epsilon
-void eprime()
+bool eprime()
 {
+    printf("eprime\n");
     if (getNextTokenTable().type == ROPP)
     {
         simp_exp();
     }
     else
         getPrevTokenTable();
+    return true;
 }
 
 // expn -> simp-expn eprime
-void expn()
+bool expn()
 {
-    simp_exp();
-    eprime();
+    printf("expn\n");
+    if (simp_exp())
+        if (eprime())
+            return true;
+    return false;
 }
 // ass-stat -> id = expn
-void ass_stat()
+bool ass_stat()
 {
-    
+    printf("ass stat\n");
+
     if (getNextTokenTable().type == IDENTIFIER)
     {
-        printToken(getCurTokenTable());
+        // printToken(getCurTokenTable());
         printf("ass-stat -> id\n");
-        if (!strcmp(getNextTokenTable().lexeme, "=")){
+        if (!strcmp(getNextTokenTable().lexeme, "="))
+        {
             printf("ass-stat -> id =\n");
-            }
+        }
         else
         {
-            invalid();
-            exit(0);
+            getPrevTokenTable();
+            saveError("= not found");
+            return false;
+            // invalid();
+            // exit(0);
         }
-        expn();
+        if (expn())
+            return true;
     }
     else
     {
-        invalid(0);
-        exit(0);
+        getPrevTokenTable();
+        saveError("not id ");
+        // invalid(0);
+        return false;
     }
 }
 // stat -> ass-stat ;
 bool stat()
 {
-    ass_stat();
-    if (!strcmp(getNextTokenTable().lexeme, ";"))
-        return true;
-    else
+    printf("stat\n");
+    if (ass_stat())
     {
+        if (!strcmp(getNextTokenTable().lexeme, ";"))
+            return true;
+        saveError("; not found");
         getPrevTokenTable();
-        return false;
     }
+    // getPrevTokenTable();
+    return false;
 }
 // stat-list -> stat stat-list | epislon
 bool stat_list()
 {
+    printf("stat list\n");
     if (stat())
     {
         stat_list();
-        printToken(getCurTokenTable());
-        printf("stat stat-list\n");
-        return true;
     }
-    else{
-        printToken(getCurTokenTable());
-        printf("epsilon\n");
-        return true;}
+    // else
+    // {
+    // printToken(getCurTokenTable());
+    // printf("epsilon\n");
+    // return false;
+    // }
+    return true;
 }
 // program - > main ( ) { declaration statment-list }
-void program()
+bool program()
 {
+    printf("program\n");
 
     // retract.row = 0;
     int countt = 0;
@@ -273,44 +375,47 @@ void program()
             {
                 if (!strcmp(getNextTokenTable().lexeme, "{"))
                 {
-                    decleration();
-                    stat_list();
-                    retract = getNextTokenTable();
-                    printToken(retract);
-                    if (strcmp(retract.lexeme, "}") == 0)
+                    printf("going in\n");
+                    if (!decleration())
+                        return false;
+                    if (!stat_list())
+                        return false;
+
+                    // printToken(getNextTokenTable());
+                    if (strcmp(getNextTokenTable().lexeme, "}") == 0)
                     {
                         printf("Parse Successful");
-                        exit(0);
+                        return true;
                     }
                     else
                     {
-                        invalid();
-                        printf("Missing parentheses '\n");
-                        exit(0);
+                        if (!error )
+                            saveError("missing }");
+                        return false;
                     }
                 }
                 else
                 {
-                    invalid();
-                    exit(0);
+                    saveError("no opening { ");
+                    return false;
                 }
             }
             else
             {
-                invalid();
-                exit(0);
+                saveError("no closing ) ");
+                return false;
             }
         }
         else
         {
-            invalid();
-            exit(0);
+            saveError("no opening ( ");
+            return false;
         }
     }
     else
     {
-        invalid();
-        exit(0);
+        saveError("no main ");
+        return false;
     }
 }
 
@@ -318,8 +423,8 @@ int main()
 {
     struct ListElement *TABLE[TableLength];
     Initialize(TABLE);
-
-    fp = fopen("digit.c", "r");
+    preprocessor("digit.c");
+    fp = fopen(intermediateFilePath, "r");
     c = fgetc(fp);
     if (fp == NULL)
     {
@@ -328,5 +433,8 @@ int main()
     }
     storeTokens(c, fp, &row, &column);
     // printTokenIndexTable();
-    program();
+    if (!program())
+    {
+        invalid();
+    }
 }

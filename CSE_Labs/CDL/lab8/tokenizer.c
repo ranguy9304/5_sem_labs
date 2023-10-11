@@ -459,6 +459,8 @@ Token getNextTokenTable(){
         return tokenIndexTable[readTokenIndex];
 
     }
+    // Token retract =
+    // printToken(retract);
     return tokenIndexTable[++readTokenIndex];
     
 }
