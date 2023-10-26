@@ -14,10 +14,9 @@
 // idPrime -> epislon | , id-list | [number],id-list | [number]     FI = { $ , , , [  } FO ={ $ }
 // stat-list -> stat stat-list | epislon                            FI = { id , $ } FO = { } }
 
-// stat -> ass-stat ; | deci_stat | loop_stat  
+// stat -> ass-stat ; | deci_stat | loop_stat
 // deci_stat -> if ( expn ) { stat_list } tprime
 // loop_stat -> while ( expn ) {stat_list} | for ( ass_stat ; expn ; ass_stat )
-
 
 // ass-stat -> id = expn                                            FI = { id }  FO = { ; }
 // expn -> simp-exp eprime                                          FI = { id , num } FO = { ; }
@@ -30,7 +29,7 @@
 // relop -> == | != | <= | >= | > | <
 // addop -> + | -
 // mulop -> * | / | %
-bool DEBUG = true;
+bool DEBUG = false;
 bool TESTING = true;
 char c, buf[10];
 int row = 0, column = 0;
@@ -54,6 +53,7 @@ void saveError(char *str)
     {
         printf("\n#################### ERROR OCCOURED ####################\n\n");
         printf("ERROR : %s \n", str);
+        printToken(getCurTokenTable());
         printf("\n#################### -------------- ####################\n\n");
     }
     if (!errorOccoured)
@@ -371,7 +371,8 @@ bool ass_stat()
 // while(expn){stat_list} | for(ass_stat ; expn ; ass_stat)
 bool loop_stat()
 {
-    if(DEBUG){
+    if (DEBUG)
+    {
         printf("loop_stat");
     }
 
@@ -382,16 +383,28 @@ bool loop_stat()
         {
             if (expn())
             {
-
-                if (!strcmp(getNextTokenTable().lexeme, "{"))
+                if (!strcmp(getNextTokenTable().lexeme, ")"))
                 {
-                    if (stat_list())
+
+                    if (!strcmp(getNextTokenTable().lexeme, "{"))
                     {
-                        if (!strcmp(getNextTokenTable().lexeme, "}"))
+                        if (stat_list())
                         {
-                            return true;
+                            if (!strcmp(getNextTokenTable().lexeme, "}"))
+                            {
+                                return true;
+                            }
+                            saveError("} NOT PRESENT");
+                            if (TESTING)
+                            {
+                                invalid();
+                                exit(0);
+                            }
                         }
-                        saveError("} NOT PRESENT");
+                    }
+                    else
+                    {
+                        saveError("{ NOT PRESENT");
                         if (TESTING)
                         {
                             invalid();
@@ -401,7 +414,7 @@ bool loop_stat()
                 }
                 else
                 {
-                    saveError("{ NOT PRESENT");
+                    saveError(") NOT PRESENT");
                     if (TESTING)
                     {
                         invalid();
@@ -434,7 +447,7 @@ bool loop_stat()
     {
         if (!strcmp(getNextTokenTable().lexeme, "("))
         {
-            if (ass_stat)
+            if (ass_stat())
             {
                 if (!strcmp(getNextTokenTable().lexeme, ";"))
                 {
@@ -442,11 +455,38 @@ bool loop_stat()
                     {
                         if (!strcmp(getNextTokenTable().lexeme, ";"))
                         {
-                            if (ass_stat)
+                            if (ass_stat())
                             {
                                 if (!strcmp(getNextTokenTable().lexeme, ")"))
                                 {
-                                    return true;
+                                    // #######################  OPTIONAL CODE ##############################3
+                                    if (!strcmp(getNextTokenTable().lexeme, "{"))
+                                    {
+                                        if (stat_list())
+                                        {
+                                            if (!strcmp(getNextTokenTable().lexeme, "}"))
+                                            {
+                                                return true;
+                                            }
+                                            saveError("} NOT PRESENT");
+                                            if (TESTING)
+                                            {
+                                                invalid();
+                                                exit(0);
+                                            }
+                                        }
+                                    }
+                                    else
+                                    {
+                                        saveError("{ NOT PRESENT");
+                                        if (TESTING)
+                                        {
+                                            invalid();
+                                            exit(0);
+                                        }
+                                    }
+                                    // #####################################################
+                                    // return true;
                                 }
                             }
                         }
@@ -489,10 +529,57 @@ bool loop_stat()
         return false;
     }
 }
-// deci_stat -> if ( expn ){stat_list} tprime
+
+bool dprime()
+{
+
+    if (DEBUG)
+    {
+        printf("dprime");
+    }
+    if (!strcmp(getNextTokenTable().lexeme, "else"))
+    {
+        if (!strcmp(getNextTokenTable().lexeme, "{"))
+        {
+            if (stat_list())
+            {
+                if (!strcmp(getNextTokenTable().lexeme, "}"))
+                {
+                    return true;
+                }
+                else
+                {
+                    saveError("} NOT PRESENT");
+                    if (TESTING)
+                    {
+                        invalid();
+                        exit(0);
+                    }
+                }
+            }
+        }
+        else
+        {
+            saveError("{ NOT PRESENT");
+            if (TESTING)
+            {
+                invalid();
+                exit(0);
+            }
+        }
+    }
+    else
+    {
+        getPrevTokenTable();
+        return true;
+    }
+}
+
+// deci_stat -> if ( expn ){stat_list} dprime
 bool deci_stat()
 {
-    if(DEBUG){
+    if (DEBUG)
+    {
         printf("deci_stat");
     }
     if (!strcmp(getNextTokenTable().lexeme, "if"))
@@ -509,7 +596,7 @@ bool deci_stat()
                         {
                             if (!strcmp(getNextTokenTable().lexeme, "}"))
                             {
-                                if (tprime())
+                                if (dprime())
                                     return true;
                             }
                             saveError("} NOT PRESENT");
