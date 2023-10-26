@@ -25,8 +25,8 @@
 // relop -> == | != | <= | >= | > | <
 // addop -> + | -
 // mulop -> * | / | %
-bool DEBUG = false;
-bool TESTING = false;
+bool DEBUG = true;
+bool TESTING = true;
 char c, buf[10];
 int row = 0, column = 0;
 FILE *fp, checkpoint;
@@ -110,26 +110,34 @@ bool listPrime()
             else
             {
                 saveError("[ ] OPENED BUT NOT CLOSED");
-             
-                return true;
+                if (TESTING)
+                {
+                    invalid();
+                    exit(0);
+                }
+
+                
             }
         }
 
         else
         {
             saveError("NO NUMBER AFTER [ ");
-          
-            return true;
+            if (TESTING)
+            {
+                invalid();
+                exit(0);
+            }
+
+            
         }
     }
     else
     {
-        // printToken(getCurTokenTable());
-        // saveError("no , or [");
+
         getPrevTokenTable();
         return true;
     }
-    // *fp = checkpoint;
 }
 bool id_list()
 {
@@ -151,47 +159,6 @@ bool id_list()
     return false;
 }
 
-// bool assignPrime()
-// {
-
-//     retract.row = 0;
-//     // retract = ;
-//     if (getNextTokenTable().type == IDENTIFIER)
-//     {
-//         // retract = getNextTokenTable();
-//         if (strcmp(getNextTokenTable().lexeme, ";") == 0)
-//             return;
-//     }
-//     else if (retract.type == NUMBER)
-//     {
-//         // retract = getNextTokenTable();
-//         if (strcmp(getNextTokenTable().lexeme, ";") == 0)
-//             return;
-//     }
-//     else
-//     {
-//         invalid();
-//         exit(0);
-//     }
-// }
-// bool Assignment()
-// {
-
-//     retract.row = 0;
-
-//     if (getNextTokenTable().type == IDENTIFIER)
-//     {
-
-//         if (strcmp(getNextTokenTable().lexeme, "=") == 0)
-//             assignPrime();
-//         else
-//         {
-
-//             invalid();
-//             exit(0);
-//         }
-//     }
-// }
 
 bool data_type()
 {
@@ -206,13 +173,9 @@ bool data_type()
     {
 
         getPrevTokenTable();
-        saveError("NOT A DATATYPE");
-        if (TESTING)
-        {
-          
-        }
+   
         return false;
-        // decl_flag = 0;
+   
     }
 }
 bool decleration()
@@ -246,24 +209,20 @@ bool factor()
     {
         return true;
     }
+    else if (getCurTokenTable().type == NUMBER)
+    {
+        return true;
+    }
     else
     {
         getPrevTokenTable();
-        if (getNextTokenTable().type == NUMBER)
+        saveError("SHOULD BE ID OR NUMBER");
+        if (TESTING)
         {
-            return true;
+            invalid();
+            exit(0);
         }
-        else
-        {
-            getPrevTokenTable();
-            saveError("SHOULD BE ID OR NUMBER");
-            if (TESTING)
-            {
-                invalid();
-                exit(0);
-            }
-            return false;
-        }
+        return false;
     }
 }
 // tprime -> mulop factor tprime | epsilon
@@ -271,7 +230,7 @@ bool tprime()
 {
     if (DEBUG)
         printf("tprime\n");
-    if (!strcmp(getNextTokenTable().lexeme,"*" ) || !strcmp(getCurTokenTable().lexeme,"/" ))
+    if (!strcmp(getNextTokenTable().lexeme, "*") || !strcmp(getCurTokenTable().lexeme, "/"))
     {
 
         if (factor())
@@ -279,7 +238,7 @@ bool tprime()
     }
     else
     {
-        saveError("MUL OPP NOT FOUND");
+  
 
         getPrevTokenTable();
     }
@@ -300,6 +259,7 @@ bool term()
             return true;
     if (TESTING)
     {
+        saveError("not factor");
         invalid();
         exit(0);
     }
@@ -310,7 +270,7 @@ bool seprime()
 {
     if (DEBUG)
         printf("seprime\n");
-    if ((!strcmp(getNextTokenTable().lexeme,"+" ) )|| (!strcmp(getCurTokenTable().lexeme,"-" )))
+    if ((!strcmp(getNextTokenTable().lexeme, "+")) || (!strcmp(getCurTokenTable().lexeme, "-")))
     {
 
         if (term())
@@ -318,8 +278,7 @@ bool seprime()
     }
     else
     {
-        saveError("ADDOP NOT FOUND");
-        // exit(0);
+
         getPrevTokenTable();
     }
 
@@ -336,6 +295,7 @@ bool simp_exp()
             return true;
     if (TESTING)
     {
+        saveError("not term");
         invalid();
         exit(0);
     }
@@ -365,6 +325,7 @@ bool expn()
             return true;
     if (TESTING)
     {
+        saveError("not simp exp");
         invalid();
         exit(0);
     }
@@ -378,11 +339,12 @@ bool ass_stat()
 
     if (getNextTokenTable().type == IDENTIFIER)
     {
-        // printToken(getCurTokenTable());
-        // printf("ass-stat -> id\n");
+
         if (!strcmp(getNextTokenTable().lexeme, "="))
         {
-            // printf("ass-stat -> id =\n");
+
+            if (expn())
+                return true;
         }
         else
         {
@@ -398,19 +360,11 @@ bool ass_stat()
             // invalid();
             // exit(0);
         }
-        if (expn())
-            return true;
     }
     else
     {
         getPrevTokenTable();
-        saveError("NOT ID");
-        // invalid(0);
-        if (TESTING)
-        {
-            invalid();
-            exit(0);
-        }
+
         return false;
     }
 }
@@ -423,15 +377,19 @@ bool stat()
     {
         if (!strcmp(getNextTokenTable().lexeme, ";"))
             return true;
-        saveError("; not found");
+        else
+        {
+
+            saveError("; not found");
+            if (TESTING)
+            {
+                invalid();
+                exit(0);
+            }
+        }
         getPrevTokenTable();
     }
-    // getPrevTokenTable();
-    if (TESTING)
-    {
-        invalid();
-        exit(0);
-    }
+
     return false;
 }
 // stat-list -> stat stat-list | epislon
@@ -443,12 +401,7 @@ bool stat_list()
     {
         stat_list();
     }
-    // else
-    // {
-    // printToken(getCurTokenTable());
-    // printf("epsilon\n");
-    // return false;
-    // }
+
     return true;
 }
 // program - > main ( ) { declaration statment-list }
@@ -477,15 +430,21 @@ bool program()
                         return false;
 
                     // printToken(getNextTokenTable());
-                    if (strcmp(getNextTokenTable().lexeme, "}") == 0)
+                    if (!strcmp(getNextTokenTable().lexeme, "}"))
                     {
                         parseSuccess();
                         return true;
                     }
                     else
                     {
-                        if (!error)
-                            saveError("missing }");
+                        // if (!error)
+                        saveError("missing }");
+                        if (TESTING)
+                        {
+                            invalid();
+                            exit(0);
+                        }
+
                         return false;
                     }
                 }
@@ -519,7 +478,7 @@ int main()
     struct ListElement *TABLE[TableLength];
     Initialize(TABLE);
     preprocessor("digit.c");
-    fp = fopen("digit.c", "r");
+    fp = fopen(intermediateFilePath, "r");
     c = fgetc(fp);
     if (fp == NULL)
     {
