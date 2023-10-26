@@ -1,125 +1,69 @@
 #include <stdio.h>
-# include<stdlib.h>
-char intermediateFilePath[]="testical.c";
-int preprocessor(char * path)
-{
-    FILE *fa, *fb,*ftemp;
+#include <stdlib.h>
+
+char intermediateFilePath[] = "testical.c";
+
+int preprocessor(char *path) {
+    FILE *fa, *fb;
     int ca, cb;
+
     fa = fopen(path, "r");
-    if (fa == NULL){
-        printf("Cannot open file \n");
-        exit(0); 
+    if (fa == NULL) {
+        printf("Cannot open file %s\n", path);
+        exit(0);
     }
+
     fb = fopen(intermediateFilePath, "w");
-    ca = getc(fa);
-    int first=2,count=0,found=0;
-    while (ca != EOF)
-    {
-        first-=1;
-        
-        
-
-        
-        if(ca==' ')
-        {
-            // if(first==0){
-
-            // first=0;
-            // }
-            // if(first==1){
-
-            // first=1;
-            // }
-            putc(ca,fb);
-            while(ca==' ')
-            ca = getc(fa);
-        }
-        if (ca=='/')
-        {   
-            // first=1;
-            cb = getc(fa);
-            if (cb == '/')
-            {
-                while(ca != '\n')
-                ca = getc(fa);
-            }
-            else if (cb == '*')
-            {
-                printf("det");
-                // do
-                // {
-                while(ca != '*')
-                    ca = getc(fa);
-                ca = getc(fa);
-                ca = getc(fa);
-                // } while (ca != '/');
-            }
-            else
-            {
-                
-                putc(ca,fb);
-                putc(cb,fb);
-            }
-        }
-        ftemp=fa;
-        if (ca == '#' && count==0 )
-        {   
-            // printf("\n\n");
-            fseek( fa, -2, SEEK_CUR );
-            cb=getc(fa);
-            // printf("%c",cb);
-            while (cb==' ' || cb=='\n')
-            {
-                // printf("%c",cb);
-                if (cb=='\n'){
-                    found=1;
-                    break;
-                }
-            
-                if (cb==' '){
-                    fseek( fa, -2, SEEK_CUR );
-                    cb=getc(fa);
-                    
-                }
-                else{
-                    break;
-                }
-                /* code */
-            }
-            fa=ftemp;
-            if (found==1 || first==1){
-                
-                while(ca != '\n' && ca !=EOF)
-                ca = getc(fa);
-
-            }
-            
-        }
-        
-     
-        else {
-            // first=1;
-            
-            // printf("%c",ca);
-                if (ca == '\n'){
-                    // first=0;
-
-                }
-            if(ca=='"' || '\''){
-                if (count==1){
-                    count-=1;
-                }
-                else if (count==0){
-                    count+=1;
-                }
-            }
-            putc(ca,fb);
-            ftemp=fa;
-        }
-        ca = getc(fa);
-        // first=0;
+    if (fb == NULL) {
+        printf("Cannot open file %s\n", intermediateFilePath);
+        fclose(fa);
+        exit(0);
     }
+
+    while ((ca = getc(fa)) != EOF) {
+        if (ca == '/') {
+            cb = getc(fa);
+            if (cb == '/') { // Single line comment
+                while ((ca = getc(fa)) != '\n' && ca != EOF);
+                continue;
+            } else if (cb == '*') { // Multi-line comment
+                do {
+                    while ((ca = getc(fa)) != '*' && ca != EOF);
+                    if (ca == EOF) break;
+                    cb = getc(fa);
+                } while (cb != '/' && cb != EOF);
+                continue;
+            } else {
+                putc(ca, fb);
+                putc(cb, fb);
+                continue;
+            }
+        } else if (ca == '#') { // Preprocessor directive
+            while ((ca = getc(fa)) != '\n' && ca != EOF);
+            continue;
+        } else if (ca == '"' || ca == '\'') { // String or character literal
+            char quoteType = ca;
+            putc(ca, fb);
+            while ((ca = getc(fa)) != quoteType && ca != EOF) {
+                putc(ca, fb);
+                if (ca == '\\') { // Escape sequence, so skip next char too
+                    ca = getc(fa);
+                    if (ca != EOF) {
+                        putc(ca, fb);
+                    }
+                }
+            }
+            if (ca != EOF) {
+                putc(ca, fb);
+            }
+            continue;
+        }
+
+        putc(ca, fb);
+    }
+
     fclose(fa);
     fclose(fb);
+
     return 0;
 }
